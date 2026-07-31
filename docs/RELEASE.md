@@ -61,29 +61,32 @@ xcrun stapler validate dist/SmartScribe.dmg
 ./script/install.sh --from-github   # needs gh auth + private repo access
 ```
 
-## GitHub release (draft / private testing)
+## GitHub release (published)
 
 ```bash
-# Ensure remote stays private
+# Ensure remote stays private until you choose otherwise
 gh repo view Pavan-Gopa/SmartScribe --json isPrivate
 
 # Push branch
 git push -u origin HEAD
 
-# Create a DRAFT release (not published to the public feed; friends with repo access can open the draft URL)
+# Create / update a normal Latest release
 gh release create v1.0.1 \
-  dist/handoff/SmartScribe.dmg \
-  dist/handoff/install.sh \
-  dist/handoff/SHA256SUMS.txt \
+  dist/SmartScribe.dmg \
   --title "SmartScribe 1.0.1" \
   --notes-file docs/RELEASE_NOTES.md \
   --target codex/parakeet-bonsai \
-  --draft \
-  --prerelease
+  --latest
+
+# If the release already exists as a draft:
+gh release edit v1.0.1 \
+  --notes-file docs/RELEASE_NOTES.md \
+  --draft=false \
+  --prerelease=false \
+  --latest=true
 ```
 
-Do **not** run `gh repo edit --visibility public`.  
-Do **not** publish the draft until closed testing confirms the build.
+Do **not** run `gh repo edit --visibility public` unless you intend to open the repo.
 
 ## Smoke checks after install
 

@@ -40,7 +40,7 @@ The panel is **non-activating** — keyboard focus stays in Telegram, the browse
 ### Also in this release line
 
 - Onboarding: full HUD explanation in an expandable panel; clearer model ordering.
-- Packaging: notarized **1.0.1** DMG for closed testing.
+- Packaging: notarized **1.0.1** DMG (Developer ID).
 - Docs cleanup (no incorrect model claims).
 - Stability from the 1.0.0 line: Parakeet audio normalization, Google polish retries, code-review hardening.
 
@@ -238,9 +238,9 @@ First-run flow covers backend/model choice, microphone, speech recognition, and 
 
 - Incorrect marketing of **Bonsai / Prism** as a supported shipping model. The app does **not** promote that model; local polish focuses on the Qwen 3.5 / Nemotron MLX catalog and user-scanned MLX trees.
 
-### Install asset for this draft
+### Install asset
 
-- **`SmartScribe.dmg` only** (no `install.sh` / checksum sidecar in the GitHub draft assets).
+- **`SmartScribe.dmg`** on the [v1.0.1 release](https://github.com/Pavan-Gopa/SmartScribe/releases/tag/v1.0.1).
 
 ---
 
@@ -255,7 +255,7 @@ First-run flow covers backend/model choice, microphone, speech recognition, and 
 
 ## Install (end users)
 
-1. Download **`SmartScribe.dmg`** from [Releases](https://github.com/Pavan-Gopa/SmartScribe/releases) (sign in if the repo is private; open **Drafts** for 1.0.1 closed tests).  
+1. Download **`SmartScribe.dmg`** from the [v1.0.1 release](https://github.com/Pavan-Gopa/SmartScribe/releases/tag/v1.0.1) (sign in if the repo is private).  
 2. Open the DMG → drag **SmartScribe** into **Applications**.  
 3. Launch from Applications. Notarized Developer ID build — if Gatekeeper still prompts: right-click → Open.  
 
