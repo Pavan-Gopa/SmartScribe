@@ -316,4 +316,4 @@ Builds are signed with **Developer ID Application: Stichting Kadamba Foundation 
 
 - In-app **Help** and onboarding replay  
 - **Export System Logs** from General settings  
-- Commercial licensing: [COMMERCIAL.md](COMMERCIAL.md)  
+- Commercial licensing: [COMMERCIAL.md](COMMERCIAL.md) · email [dhamamedia@gmail.com](mailto:dhamamedia@gmail.com)  

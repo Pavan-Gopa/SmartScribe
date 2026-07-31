@@ -20,6 +20,7 @@ Personal hobby use, private study, and noncommercial experimentation remain free
 
 Contact the maintainer to discuss pricing and terms:
 
+- **Email:** [dhamamedia@gmail.com](mailto:dhamamedia@gmail.com)
 - GitHub: open an issue on this repository, or message **@Pavan-Gopa**
 - Subject line suggestion: `SmartScribe commercial license`
 
