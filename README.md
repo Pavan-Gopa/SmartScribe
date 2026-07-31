@@ -5,7 +5,12 @@
 <h1 align="center">SmartScribe</h1>
 
 <p align="center">
-  <strong>Native macOS dictation for Apple Silicon</strong> — speak, get clean text, and drop it into any app.
+  <strong>Your voice. Your words. Ready to use.</strong>
+</p>
+
+<p align="center">
+  AI-powered voice input for your Mac.<br>
+  Dictate, rewrite, translate, format, and insert polished text into any app — with local and cloud AI models.
 </p>
 
 <p align="center">
@@ -25,7 +30,7 @@
   <a href="#license--distribution">License</a>
 </p>
 
-SmartScribe is a **pure Swift / SwiftUI** desktop app (AppKit only where the OS requires it). No Electron, no browser shell, no cloud dependency for the core path. You can work fully offline with local models, or optionally plug in cloud APIs when you want higher-end polishing or Gemini dictation.
+Native **Swift / SwiftUI** for Apple Silicon — not Electron, not a browser shell. Work fully offline with local models, or plug in cloud APIs when you want them.
 
 ---
 
