@@ -3,10 +3,10 @@
 ## Branch
 
 ```text
-codex/parakeet-bonsai
+main
 ```
 
-Repository: `https://github.com/Pavan-Gopa/SmartScribe` (**must remain private** until explicitly opened).
+Repository: `https://github.com/Pavan-Gopa/SmartScribe`.
 
 ## Build signed DMG
 
@@ -75,7 +75,7 @@ gh release create v1.0.1 \
   dist/SmartScribe.dmg \
   --title "SmartScribe 1.0.1" \
   --notes-file docs/RELEASE_NOTES.md \
-  --target codex/parakeet-bonsai \
+  --target main \
   --latest
 
 # If the release already exists as a draft:

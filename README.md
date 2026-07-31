@@ -260,10 +260,6 @@ First-run flow covers backend/model choice, microphone, speech recognition, and 
 - Retries for stalled Google polishing requests.  
 - Broad code-review safety pass from the 1.0.0 hardening line.  
 
-### Removed from docs (not product claims)
-
-- Incorrect marketing of **Bonsai / Prism** as a supported shipping model. The app does **not** promote that model; local polish focuses on the Qwen 3.5 / Nemotron MLX catalog and user-scanned MLX trees.
-
 ### Install asset
 
 - **`SmartScribe.dmg`** on the [v1.0.1 release](https://github.com/Pavan-Gopa/SmartScribe/releases/tag/v1.0.1).
