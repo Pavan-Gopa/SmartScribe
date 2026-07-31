@@ -37,6 +37,12 @@ Details:
 - Signed with Developer ID and **notarized by Apple**.
 - Install: open `SmartScribe.dmg` → drag **SmartScribe** to Applications.
 
+### Fixes in this build
+
+- HUD provider list no longer shows **duplicate providers** (e.g. Qwen twice).
+- **Local.AI** appears correctly in the HUD provider switcher alongside cloud providers.
+- Screenshot of the switcher updated to the current UI.
+
 ### Stability (carried / hardened)
 
 - Parakeet audio input normalization.
