@@ -229,3 +229,189 @@ private struct TestPolishingError: LocalizedError, Sendable {
         "Polishing failed in test."
     }
 }
+
+@MainActor
+@Test
+func polishingWorkflowInjectsTranslationOverrideWhenTargetLanguageSet() async {
+    let store = NoteStore()
+    let note = store.addEmptyNote()
+    store.applyTranscriptionResult(
+        for: note.id,
+        result: TranscriptionResult(
+            text: "это русский исходный текст про API и prompt template",
+            diagnostics: EngineDiagnostics(backendName: "Test Transcriber")
+        )
+    )
+    let engine = PromptCapturingPolishingEngine()
+    let workflow = PolishingWorkflow(noteStore: store, engine: engine)
+
+    await workflow.polishNote(note.id, variants: [.variantOne], targetLanguage: "es")
+
+    let body = await engine.lastTemplateBody ?? ""
+    // An authoritative translation override names the target language.
+    #expect(body.contains("TRANSLATION OVERRIDE"))
+    #expect(body.contains("into Spanish"))
+    // The override explicitly suspends the templates' "never translate" rules...
+    #expect(body.contains("OVERRIDES and SUSPENDS"))
+    // ...and the real default template's anti-translation clause is still present,
+    // now superseded by the override.
+    #expect(body.contains("Never translate"))
+    // The template's polishing style is preserved alongside the override.
+    #expect(body.contains("precision transcription editor"))
+    // A final reminder is appended after the template body to counter recency.
+    #expect(body.contains("FINAL TRANSLATION REMINDER"))
+    // The translation override must supersede the Cyrillic source-language lock.
+    #expect(!body.contains("LANGUAGE LOCK"))
+    // The transcription placeholder must still be rendered away.
+    #expect(!body.contains("${transcription}"))
+}
+
+@MainActor
+@Test
+func polishingWorkflowKeepsCyrillicLockWhenNoTargetLanguage() async {
+    let store = NoteStore()
+    let note = store.addEmptyNote()
+    store.applyTranscriptionResult(
+        for: note.id,
+        result: TranscriptionResult(
+            text: "это русский исходный текст про API и prompt template",
+            diagnostics: EngineDiagnostics(backendName: "Test Transcriber")
+        )
+    )
+    let engine = PromptCapturingPolishingEngine()
+    let workflow = PolishingWorkflow(noteStore: store, engine: engine)
+
+    await workflow.polishNote(note.id, variants: [.variantOne])
+
+    let body = await engine.lastTemplateBody ?? ""
+    #expect(body.contains("LANGUAGE LOCK"))
+    #expect(!body.contains("TRANSLATION OVERRIDE"))
+}
+
+@MainActor
+@Test
+func polishingWorkflowTranslatesEnglishTargetWithoutCyrillicLock() async {
+    // Behavior change: an explicit English target now produces a translation
+    // override even for Cyrillic source (previously English targets were a
+    // no-op that merely skipped the Cyrillic lock).
+    let store = NoteStore()
+    let note = store.addEmptyNote()
+    store.applyTranscriptionResult(
+        for: note.id,
+        result: TranscriptionResult(
+            text: "это русский исходный текст про API и prompt template",
+            diagnostics: EngineDiagnostics(backendName: "Test Transcriber")
+        )
+    )
+    let engine = PromptCapturingPolishingEngine()
+    let workflow = PolishingWorkflow(noteStore: store, engine: engine)
+
+    await workflow.polishNote(note.id, variants: [.variantOne], targetLanguage: "en")
+
+    let body = await engine.lastTemplateBody ?? ""
+    #expect(body.contains("TRANSLATION OVERRIDE"))
+    #expect(body.contains("into English"))
+    #expect(!body.contains("LANGUAGE LOCK"))
+}
+
+@MainActor
+@Test
+func polishingWorkflowTranslatesNonCyrillicSourceWhenTargetSet() async {
+    // A non-Cyrillic source would normally yield no language guard at all, but
+    // an explicit target language must still inject the translation override.
+    let store = NoteStore()
+    let note = store.addEmptyNote()
+    store.applyTranscriptionResult(
+        for: note.id,
+        result: TranscriptionResult(
+            text: "this is a plain english transcript about an API and a prompt template",
+            diagnostics: EngineDiagnostics(backendName: "Test Transcriber")
+        )
+    )
+    let engine = PromptCapturingPolishingEngine()
+    let workflow = PolishingWorkflow(noteStore: store, engine: engine)
+
+    await workflow.polishNote(note.id, variants: [.variantOne], targetLanguage: "fr")
+
+    let body = await engine.lastTemplateBody ?? ""
+    #expect(body.contains("TRANSLATION OVERRIDE"))
+    #expect(body.contains("into French"))
+    #expect(body.contains("FINAL TRANSLATION REMINDER"))
+}
+
+@MainActor
+@Test
+func polishingWorkflowIgnoresBlankTargetLanguageAndKeepsCyrillicLock() async {
+    // A whitespace-only target language normalizes to empty and must be treated
+    // as "no translation requested", preserving the Cyrillic source lock.
+    let store = NoteStore()
+    let note = store.addEmptyNote()
+    store.applyTranscriptionResult(
+        for: note.id,
+        result: TranscriptionResult(
+            text: "это русский исходный текст про API и prompt template",
+            diagnostics: EngineDiagnostics(backendName: "Test Transcriber")
+        )
+    )
+    let engine = PromptCapturingPolishingEngine()
+    let workflow = PolishingWorkflow(noteStore: store, engine: engine)
+
+    await workflow.polishNote(note.id, variants: [.variantOne], targetLanguage: "   ")
+
+    let body = await engine.lastTemplateBody ?? ""
+    #expect(body.contains("LANGUAGE LOCK"))
+    #expect(!body.contains("TRANSLATION OVERRIDE"))
+}
+
+@MainActor
+@Test
+func polishingWorkflowDoesNotStrictRetryWhileTranslating() async {
+    // When translating, the polished output is expected to be in the target
+    // (non-Cyrillic) language, so the Cyrillic-drift strict retry must never
+    // trigger even if the engine returns Latin-only text.
+    let store = NoteStore()
+    let note = store.addEmptyNote()
+    store.applyTranscriptionResult(
+        for: note.id,
+        result: TranscriptionResult(
+            text: "это русский исходный текст про API и prompt template",
+            diagnostics: EngineDiagnostics(backendName: "Test Transcriber")
+        )
+    )
+    let engine = CountingEnglishPolishingEngine()
+    let workflow = PolishingWorkflow(noteStore: store, engine: engine)
+
+    await workflow.polishNote(note.id, variants: [.variantOne], targetLanguage: "es")
+
+    #expect(await engine.callCount == 1, "translation must suppress the strict Cyrillic retry")
+}
+
+private actor CountingEnglishPolishingEngine: PolishingEngine {
+    nonisolated let id = "counting-english-polish-engine"
+    nonisolated let displayName = "Counting English Polish Engine"
+
+    private(set) var callCount = 0
+
+    func polish(_ request: PolishingRequest) async throws -> PolishingResult {
+        callCount += 1
+        return PolishingResult(
+            text: "This is an English translation about an API and a prompt template.",
+            diagnostics: EngineDiagnostics(backendName: displayName)
+        )
+    }
+}
+
+private actor PromptCapturingPolishingEngine: PolishingEngine {
+    nonisolated let id = "prompt-capturing-polish-engine"
+    nonisolated let displayName = "Prompt Capturing Polish Engine"
+
+    private(set) var lastTemplateBody: String?
+
+    func polish(_ request: PolishingRequest) async throws -> PolishingResult {
+        lastTemplateBody = try request.template.render(transcription: request.rawText)
+        return PolishingResult(
+            text: request.rawText,
+            diagnostics: EngineDiagnostics(backendName: displayName)
+        )
+    }
+}

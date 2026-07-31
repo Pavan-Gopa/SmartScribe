@@ -41,6 +41,7 @@ struct ContentView: View {
     @State private var isTogglingHotkeyRecording = false
     @State private var hotkeyOwnerID = UUID()
     @State private var hotkeySessionOverlayManager = HotkeySessionOverlayManager()
+    @State private var providerQuickSwitcher = ProviderQuickSwitcher()
     @State private var pendingHotkeyForceTargetLanguage = false
     @AppStorage("hud.forceTargetLanguage") private var persistentHUDForceTargetLanguage = false
 
@@ -111,6 +112,7 @@ struct ContentView: View {
             .onAppear {
                 syncLocalizedServices()
                 isShowingOnboarding = !generalSettingsStore.settings.hasCompletedOnboarding
+                configureProviderQuickSwitcher()
             }
             .onChange(of: generalSettingsStore.settings.uiLanguage) { _, _ in
                 syncLocalizedServices()
@@ -514,8 +516,9 @@ struct ContentView: View {
 
         let engine = transcriptionEngineStore.activeEngine(modelStore: transcriptionModelStore)
         let languageCode = transcriptionModelStore.resolvedLanguageCode
-        let activeModel = transcriptionModelStore.activeModel
-        let isMultilingual = activeModel?.languageSupport == .multilingual
+        // Native translation is only available on multilingual Whisper; Parakeet
+        // and English-only Whisper translate via the polishing pass instead.
+        let isMultilingual = activeModelSupportsNativeTranslation
         let route = TranscriptionLanguageRouter.route(
             resolvedLanguageCode: languageCode,
             isMultilingualModel: isMultilingual
@@ -566,8 +569,9 @@ struct ContentView: View {
             } else {
                 languageCode = transcriptionModelStore.resolvedLanguageCode
             }
-            let activeModel = transcriptionModelStore.activeModel
-            let isMultilingual = activeModel?.languageSupport == .multilingual
+            // Native translation is only available on multilingual Whisper; Parakeet
+            // and English-only Whisper translate via the polishing pass instead.
+            let isMultilingual = activeModelSupportsNativeTranslation
             let route = TranscriptionLanguageRouter.route(
                 resolvedLanguageCode: languageCode,
                 isMultilingualModel: isMultilingual,
@@ -629,7 +633,13 @@ struct ContentView: View {
             NativeSmartScribeLog.hotkey.info(
                 "Transcription routing forceTargetLanguage=\(forceTargetLanguage) translateToEnglish=\(route.translateToEnglish) forcedLanguageCode=\(route.forcedLanguageCode ?? "none", privacy: .public) autoTranslationTarget=\(autoTranslationTargetLanguage ?? "none", privacy: .public) resolvedLanguageCode=\(languageCode, privacy: .public) needsTranslation=\(needsTranslation) rawLooksForeign=\(rawTextLooksForeign)"
             )
-            if needsTranslation,
+            // Variant B: only native-translation models (multilingual Whisper)
+            // pre-translate the raw text here. For Parakeet / English-only Whisper
+            // the raw transcript stays in the source language and the translation is
+            // produced by the polishing pass below (the target language is forwarded
+            // to `polish` via `polishingTargetLang`).
+            let needsRawPreTranslation = activeModelSupportsNativeTranslation && needsTranslation
+            if needsRawPreTranslation,
                let targetLanguageName = autoTranslationTargetLanguage,
                !rawText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 await autoTranslateRawText(
@@ -917,7 +927,7 @@ struct ContentView: View {
                 pendingHotkeySourcePID = sourceApplication?.processIdentifier
                 pendingHotkeyFocusedElement = AccessibilityPermissionService.focusedElement()
                 let resolvedTarget = settings.target
-                let languageControlEnabled = isHUDLanguageControlEnabled
+                let languageControlEnabled = isHUDLanguageControlEnabled(for: resolvedTarget)
                 if !languageControlEnabled {
                     persistentHUDForceTargetLanguage = false
                 }
@@ -944,7 +954,8 @@ struct ContentView: View {
                         languageControlEnabled: languageControlEnabled,
                         onOriginChange: persistOverlayOrigin,
                         onLanguageTap: handleOverlayLanguageTap,
-                        onTargetTap: handleOverlayTargetTap
+                        onTargetTap: handleOverlayTargetTap,
+                        onScroll: handleOverlayProviderScroll
                     )
                     hotkeySessionOverlayManager.update(
                         spectrumBands: audioRecorder.frequencyBands,
@@ -989,12 +1000,165 @@ struct ContentView: View {
     private func finishHotkeySessionIfNeeded(target: HotkeyTarget?) {
         hotkeySessionOverlayManager.playCue(.finish, settings: generalSettingsStore.settings.overlay)
         hotkeySessionOverlayManager.hide()
+        providerQuickSwitcher.hide()
         HotkeySessionCoordinator.shared.finish(ownerID: hotkeyOwnerID)
     }
 
     private func persistOverlayOrigin(_ origin: OverlayHUDOrigin) {
         generalSettingsStore.update { settings in
             settings.overlay.setOrigin(origin, for: settings.overlay.style)
+        }
+    }
+
+    // MARK: - Provider quick switcher (hidden HUD scroll gesture)
+
+    private func configureProviderQuickSwitcher() {
+        let store = polishingEngineStore
+        let switcher = providerQuickSwitcher
+        switcher.onSwitchProvider = { providerID in
+            ContentView.applyQuickSwitchProvider(providerID: providerID, store: store)
+        }
+        switcher.onModelMenuRequested = { providerID, anchorView, location in
+            ContentView.presentQuickSwitchModelMenu(
+                providerID: providerID,
+                anchorView: anchorView,
+                location: location,
+                store: store,
+                switcher: switcher
+            )
+        }
+    }
+
+    private func handleOverlayProviderScroll(deltaY: CGFloat) {
+        var providers: [ProviderQuickSwitcherModel.Provider] = [
+            ProviderQuickSwitcherModel.Provider(
+                id: PolishingEngineStore.mlxSwiftEngineID,
+                displayName: "Local.AI"
+            )
+        ]
+
+        let cloudProviders = polishingEngineStore.apiSettings.availablePolishingProviders.map {
+            ProviderQuickSwitcherModel.Provider(
+                id: $0.kind.polishingEngineID,
+                displayName: $0.displayName
+            )
+        }
+
+        for p in cloudProviders {
+            if !providers.contains(where: { $0.id == p.id || $0.displayName == p.displayName }) {
+                providers.append(p)
+            }
+        }
+
+        guard !providers.isEmpty,
+              let anchorFrame = hotkeySessionOverlayManager.currentHUDFrame() else {
+            return
+        }
+        providerQuickSwitcher.handleHUDScroll(
+            deltaY: deltaY,
+            providers: providers,
+            activeID: polishingEngineStore.selectedEngineID,
+            anchorFrame: anchorFrame
+        )
+    }
+
+    private static func applyQuickSwitchProvider(providerID: String, store: PolishingEngineStore) {
+        if providerID == PolishingEngineStore.mlxSwiftEngineID {
+            store.selectedEngineID = PolishingEngineStore.mlxSwiftEngineID
+        } else if let kind = APIProviderKind(polishingEngineID: providerID) {
+            store.selectAPIProvider(kind)
+        }
+    }
+
+    private static func presentQuickSwitchModelMenu(
+        providerID: String,
+        anchorView: NSView,
+        location: NSPoint,
+        store: PolishingEngineStore,
+        switcher: ProviderQuickSwitcher
+    ) {
+        if providerID == PolishingEngineStore.mlxSwiftEngineID {
+            let downloadedModels = store.allModels.filter { store.installationState(for: $0).isDownloaded }
+            let currentActiveID = store.settings.activeModelID
+            let menu = NSMenu()
+            menu.autoenablesItems = false
+            var targets: [QuickSwitcherMenuTarget] = []
+
+            if downloadedModels.isEmpty {
+                let item = NSMenuItem(
+                    title: "No local models downloaded",
+                    action: nil,
+                    keyEquivalent: ""
+                )
+                item.isEnabled = false
+                menu.addItem(item)
+            } else {
+                for model in downloadedModels {
+                    let target = QuickSwitcherMenuTarget {
+                        store.activate(model)
+                        switcher.hide()
+                    }
+                    targets.append(target)
+                    let item = NSMenuItem(
+                        title: model.displayName,
+                        action: #selector(QuickSwitcherMenuTarget.invoke),
+                        keyEquivalent: ""
+                    )
+                    item.target = target
+                    if model.id == currentActiveID {
+                        item.state = NSControl.StateValue.on
+                    }
+                    menu.addItem(item)
+                }
+            }
+            menu.popUp(positioning: nil, at: location, in: anchorView)
+            return
+        }
+
+        guard let kind = APIProviderKind(polishingEngineID: providerID) else { return }
+        let optionsProvider = PolishingModelOptionsProvider(apiSettings: store.apiSettings)
+        let options = optionsProvider.providerModelOptions(
+            for: kind,
+            favorites: FavoriteModelsStore.loadFavorites()
+        )
+        guard !options.isEmpty else { return }
+
+        let currentModel = store.apiSettings.configuration(for: kind).textModel
+        let menu = NSMenu()
+        menu.autoenablesItems = false
+        var targets: [QuickSwitcherMenuTarget] = []
+        for option in options {
+            let target = QuickSwitcherMenuTarget {
+                var config = store.apiSettings.configuration(for: kind)
+                config.textModel = option.id
+                store.updateAPIConfiguration(config, for: kind)
+                store.selectAPIProvider(kind)
+                switcher.hide()
+            }
+            targets.append(target)
+            let item = NSMenuItem(
+                title: option.displayName,
+                action: #selector(QuickSwitcherMenuTarget.invoke),
+                keyEquivalent: ""
+            )
+            item.target = target
+            if option.id == currentModel {
+                item.state = NSControl.StateValue.on
+            }
+            menu.addItem(item)
+        }
+        menu.popUp(positioning: nil, at: location, in: anchorView)
+    }
+
+    /// Retains a closure behind an `NSMenuItem` target for the duration of a
+    /// synchronous `NSMenu.popUp` call.
+    private final class QuickSwitcherMenuTarget: NSObject {
+        private let handler: () -> Void
+        init(handler: @escaping () -> Void) {
+            self.handler = handler
+        }
+        @objc func invoke() {
+            handler()
         }
     }
 
@@ -1072,17 +1236,40 @@ struct ContentView: View {
         TranscriptionLanguageOption.hudLabel(for: targetLanguageCode)
     }
 
+    /// Whether the active transcription model can translate speech natively.
+    /// Only multilingual Whisper supports this (WhisperKit `task: .translate`,
+    /// X→English). Parakeet and English-only Whisper cannot translate natively;
+    /// for them translation happens during the polishing pass instead.
+    private var activeModelSupportsNativeTranslation: Bool {
+        guard let activeModel = transcriptionModelStore.activeModel else { return false }
+        return activeModel.backend == .whisperKitCoreML
+            && activeModel.languageSupport == .multilingual
+    }
+
+    /// The processing target currently reflected by the HUD (R / 1 / 2).
+    private var currentHUDTarget: HotkeyTarget {
+        pendingHotkeyTarget ?? hotkeySettingsStore.settings.target
+    }
+
     private var isHUDLanguageControlEnabled: Bool {
+        isHUDLanguageControlEnabled(for: currentHUDTarget)
+    }
+
+    /// Whether the HUD language ("A") control should be enabled for a given target.
+    /// - Gemini Cloud and native-translation models (multilingual Whisper): always.
+    /// - Non-translating models (Parakeet, English-only Whisper): only for polishing
+    ///   variants (1/2) and only when an LLM polishing engine is available, because
+    ///   the translation is performed by the polishing model. On RAW there is no
+    ///   translation path, so the control stays disabled.
+    private func isHUDLanguageControlEnabled(for target: HotkeyTarget) -> Bool {
         if transcriptionModelStore.settings.backend == .geminiCloud {
             return true
         }
-
-        guard let activeModel = transcriptionModelStore.activeModel else {
-            return false
+        if activeModelSupportsNativeTranslation {
+            return true
         }
-
-        return activeModel.backend == .whisperKitCoreML
-            && activeModel.languageSupport == .multilingual
+        guard target != .raw else { return false }
+        return polishingEngineStore.isActiveEngineTranslationCapable
     }
 
     private var effectiveHUDForceTargetLanguage: Bool {
@@ -1121,7 +1308,20 @@ struct ContentView: View {
         if next != .raw {
             polishingEngineStore.ensurePolishingEnabledForWidgetTarget()
         }
-        hotkeySessionOverlayManager.update(hotkeyTarget: next)
+        // For non-translating models the language ("A") control is only available on
+        // polishing variants. Re-evaluate it after every target change and reset the
+        // forced target language when the control becomes unavailable (e.g. on RAW).
+        let languageControlEnabled = isHUDLanguageControlEnabled(for: next)
+        if !languageControlEnabled {
+            persistentHUDForceTargetLanguage = false
+            pendingHotkeyForceTargetLanguage = false
+        }
+        hotkeySessionOverlayManager.update(
+            languageMode: persistentHUDForceTargetLanguage ? .target : .auto,
+            hotkeyTarget: next,
+            targetLanguageLabel: autoTranslationLanguageLabel,
+            languageControlEnabled: languageControlEnabled
+        )
     }
 
     /// Two-stage cloud dictation:

@@ -22,3 +22,21 @@ xcuserdata/
 # Code review reports (generated, not tracked)
 .review/reports/
 .review/registry/.prev_count
+
+# Agent / review noise (never ship)
+.review/
+.agents/
+.cline/
+graphify-out/
+Screenshots for GITHUB/
+
+# One-off localization tooling (not part of the app product)
+build_translations.py
+check_tr.py
+extract_keys.py
+en_keys.txt
+en_values.json
+token_keys.txt
+tr_*.py
+TRANSLATION_GUIDE.md
+REASONING_MODELS_FIX.md

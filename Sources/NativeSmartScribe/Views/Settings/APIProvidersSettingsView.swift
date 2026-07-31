@@ -1052,7 +1052,7 @@ private struct UsageInlineCard: View {
 
             Divider()
 
-            // Token & Cost summary chips
+            // Last Usage — the most recent request
             let lastTx = usageStatisticsStore.settings.lastTransaction
             let lastModelID = currentSelectedModelKey ?? activeModelID
             let lastCostStr = CloudProviderModelCatalog.formattedCostUSD(
@@ -1060,6 +1060,14 @@ private struct UsageInlineCard: View {
                 promptTokens: lastTx.promptTokens,
                 completionTokens: lastTx.completionTokens
             )
+
+            HStack(spacing: 4) {
+                Image(systemName: "clock.arrow.circlepath")
+                    .font(.system(size: 9, weight: .semibold))
+                Text(generalSettingsStore.text(.lastUsage))
+                    .font(.system(size: 11, weight: .semibold))
+            }
+            .foregroundStyle(.secondary)
 
             HStack(spacing: 10) {
                 tokenStatChip(
@@ -1090,6 +1098,14 @@ private struct UsageInlineCard: View {
 
             if !availableModelIDs.isEmpty {
                 Divider()
+
+                HStack(spacing: 4) {
+                    Image(systemName: "chart.bar.fill")
+                        .font(.system(size: 9, weight: .semibold))
+                    Text(generalSettingsStore.text(.totalUsageLabel))
+                        .font(.system(size: 11, weight: .semibold))
+                }
+                .foregroundStyle(.secondary)
 
                 HStack(spacing: 10) {
                     Text(generalSettingsStore.text(.selectedModel))

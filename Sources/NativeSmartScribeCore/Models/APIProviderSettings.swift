@@ -391,15 +391,16 @@ public struct APIProviderSettings: Codable, Equatable, Sendable {
   }
 
   public var availablePolishingProviders: [AvailableAPIProvider] {
-    APIProviderKind.polishingUICases.compactMap { kind in
+    var result: [AvailableAPIProvider] = []
+    for kind in APIProviderKind.polishingUICases {
       let config = configuration(for: kind)
-      guard config.hasAPIKey else { return nil }
+      guard config.hasAPIKey else { continue }
       let model = config.textModel.trimmingCharacters(in: .whitespacesAndNewlines)
-      guard !model.isEmpty else { return nil }
+      guard !model.isEmpty else { continue }
       if kind == .custom || kind == .qwen {
         // Qwen needs its base URL; custom always needs a base URL.
         let base = config.baseURL.trimmingCharacters(in: .whitespacesAndNewlines)
-        if kind == .custom, base.isEmpty { return nil }
+        if kind == .custom, base.isEmpty { continue }
       }
       let label: String
       if kind == .custom {
@@ -408,8 +409,11 @@ public struct APIProviderSettings: Codable, Equatable, Sendable {
       } else {
         label = kind.displayName
       }
-      return AvailableAPIProvider(kind: kind, displayName: label, modelName: model)
+      if !result.contains(where: { $0.kind == kind || $0.displayName == label }) {
+        result.append(AvailableAPIProvider(kind: kind, displayName: label, modelName: model))
+      }
     }
+    return result
   }
 
   public func configuration(for kind: APIProviderKind) -> APIProviderConfiguration {

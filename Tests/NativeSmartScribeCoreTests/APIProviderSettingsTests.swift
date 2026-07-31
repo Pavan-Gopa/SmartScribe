@@ -132,3 +132,20 @@ func apiProviderConfiguredKeyCountIgnoresBlankEntries() {
   #expect(config.configuredAPIKeyCount == 2)
   #expect(config.sanitizedAPIKeys == ["key1"])
 }
+
+@Test
+func apiProviderSettingsDeduplicatesAvailablePolishingProviders() {
+  var settings = APIProviderSettings()
+  settings.qwen.apiKey = "qwen-key"
+  settings.qwen.textModel = "qwen3.7-plus"
+
+  // Custom provider with same display name or kind as Qwen
+  settings.custom.name = "Qwen"
+  settings.custom.apiKey = "custom-key"
+  settings.custom.baseURL = "https://example.com/v1"
+  settings.custom.textModel = "custom-model"
+
+  let available = settings.availablePolishingProviders
+  let names = available.map(\.displayName)
+  #expect(names.count == Set(names).count)
+}

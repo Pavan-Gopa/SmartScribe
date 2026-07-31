@@ -9,8 +9,16 @@ struct StatisticsSettingsView: View {
 
     var body: some View {
         Form {
-            Section(generalSettingsStore.text(.lastTransactionDetails)) {
+            Section(generalSettingsStore.text(.lastUsage)) {
                 UsageTokenRows(count: usageStatisticsStore.settings.lastTransaction)
+                LabeledContent(
+                    generalSettingsStore.text(.estCost),
+                    value: CloudProviderModelCatalog.formattedCostUSD(
+                        modelID: resolvedSelectedModelID ?? "",
+                        promptTokens: usageStatisticsStore.settings.lastTransaction.promptTokens,
+                        completionTokens: usageStatisticsStore.settings.lastTransaction.completionTokens
+                    )
+                )
             }
 
             Section(totalUsageTitle) {

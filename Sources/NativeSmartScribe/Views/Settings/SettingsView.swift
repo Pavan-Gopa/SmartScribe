@@ -13,16 +13,16 @@ struct SettingsView: View {
                     Label(generalSettingsStore.text(.settingsGeneral), systemImage: "gearshape")
                 }
 
-            APIProvidersSettingsView()
-                .overlayScrollbar()
-                .tabItem {
-                    Label(generalSettingsStore.text(.settingsAPIProviders), systemImage: "network")
-                }
-
             HotkeySettingsView()
                 .overlayScrollbar()
                 .tabItem {
                     Label(generalSettingsStore.text(.settingsHotkey), systemImage: "keyboard")
+                }
+
+            APIProvidersSettingsView()
+                .overlayScrollbar()
+                .tabItem {
+                    Label(generalSettingsStore.text(.settingsAPIProviders), systemImage: "network")
                 }
 
             LocalModelsSettingsView()

@@ -29,6 +29,7 @@ final class HotkeySessionOverlayManager {
     private var originChangeHandler: ((OverlayHUDOrigin) -> Void)?
     private var languageTapHandler: (() -> Void)?
     private var targetTapHandler: (() -> Void)?
+    private var scrollHandler: ((_ deltaY: CGFloat) -> Void)?
 
     func show(
         mode: Mode,
@@ -40,7 +41,8 @@ final class HotkeySessionOverlayManager {
         languageControlEnabled: Bool = true,
         onOriginChange: ((OverlayHUDOrigin) -> Void)? = nil,
         onLanguageTap: (() -> Void)? = nil,
-        onTargetTap: (() -> Void)? = nil
+        onTargetTap: (() -> Void)? = nil,
+        onScroll: ((_ deltaY: CGFloat) -> Void)? = nil
     ) {
         let styleChanged = state.style != settings.style
         let modeChanged = state.mode != mode
@@ -63,6 +65,7 @@ final class HotkeySessionOverlayManager {
         self.originChangeHandler = onOriginChange
         self.languageTapHandler = onLanguageTap
         self.targetTapHandler = onTargetTap
+        self.scrollHandler = onScroll
         panel.updateControlsVisibility(showsControls)
         panel.prepareForDisplay(
             settings: settings,
@@ -141,6 +144,13 @@ final class HotkeySessionOverlayManager {
         AudioCuePlayer.shared.play(cue, settings: settings)
     }
 
+    /// Current on-screen frame of the HUD panel, used to anchor the provider
+    /// quick switcher. Nil while the HUD is hidden.
+    func currentHUDFrame() -> NSRect? {
+        guard state.isVisible, let panel else { return nil }
+        return panel.frame
+    }
+
     private func makePanel() -> DraggableOverlayPanel {
         let panel = DraggableOverlayPanel(
             overlayState: state,
@@ -164,6 +174,9 @@ final class HotkeySessionOverlayManager {
         }
         panel.onRightTap = { [weak self] in
             self?.targetTapHandler?()
+        }
+        panel.onScroll = { [weak self] delta in
+            self?.scrollHandler?(delta)
         }
         panel.updateControlsVisibility(state.showsControls)
         return panel
@@ -419,6 +432,10 @@ private final class DraggableOverlayPanel: NSPanel {
         get { rootView.onRightTap }
         set { rootView.onRightTap = newValue }
     }
+    var onScroll: ((_ deltaY: CGFloat) -> Void)? {
+        get { rootView.onScroll }
+        set { rootView.onScroll = newValue }
+    }
 
     private let overlayState: OverlayState
     private let rootView: OverlayRootView
@@ -579,6 +596,7 @@ private final class OverlayRootView: NSView {
     var onMouseDown: ((CGPoint) -> Void)?
     var onMouseDragged: ((CGPoint) -> Void)?
     var onMouseUp: (() -> Void)?
+    var onScroll: ((_ deltaY: CGFloat) -> Void)?
     var onLeftTap: (() -> Void)? {
         get { captureView.onLeftTap }
         set { captureView.onLeftTap = newValue }
@@ -605,6 +623,7 @@ private final class OverlayRootView: NSView {
         captureView.onMouseDown = { [weak self] point in self?.onMouseDown?(point) }
         captureView.onMouseDragged = { [weak self] point in self?.onMouseDragged?(point) }
         captureView.onMouseUp = { [weak self] in self?.onMouseUp?() }
+        captureView.onScroll = { [weak self] delta in self?.onScroll?(delta) }
         captureView.controlFramesProvider = { [weak state] bounds in
             guard let state else {
                 return OverlayHUDLayout.controlButtonHitFrames(
@@ -647,6 +666,7 @@ private final class OverlayMouseCaptureView: NSView {
     var onMouseUp: (() -> Void)?
     var onLeftTap: (() -> Void)?
     var onRightTap: (() -> Void)?
+    var onScroll: ((_ deltaY: CGFloat) -> Void)?
     var showsControls = false
     var controlFramesProvider: ((CGRect) -> (left: CGRect, right: CGRect))?
 
@@ -702,6 +722,17 @@ private final class OverlayMouseCaptureView: NSView {
             onMouseUp?()
         } else if let tapPoint {
             handleTap(at: tapPoint)
+        }
+    }
+
+    override func scrollWheel(with event: NSEvent) {
+        // Normalize line-based mouse-wheel deltas so one notch maps to one
+        // discrete step; trackpads already deliver precise pixel deltas.
+        let delta = event.hasPreciseScrollingDeltas
+            ? event.scrollingDeltaY
+            : event.scrollingDeltaY * ProviderQuickSwitcherModel.defaultStepThreshold
+        if abs(delta) > 0.001 {
+            onScroll?(delta)
         }
     }
 

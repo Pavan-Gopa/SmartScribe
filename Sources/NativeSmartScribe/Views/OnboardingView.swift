@@ -354,7 +354,7 @@ struct OnboardingView: View {
             .font(.subheadline.weight(.semibold))
 
           if model.id == Self.recommendedOnboardingModelID {
-            statusBadge(settingsStore.text(.badgeRecommended), tint: .green)
+            statusBadge(settingsStore.text(.badgeRecommended), tint: .blue)
           } else if let badge = model.badge {
             statusBadge(badge, tint: .blue)
           }

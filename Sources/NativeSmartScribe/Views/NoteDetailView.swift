@@ -862,9 +862,8 @@ struct NoteDetailView: View {
         onTextChanged(draft.noteID, draft.variant, rewritten.text)
     }
 
-    private struct PolishingModelOption: Identifiable, Equatable {
-        let id: String
-        let displayName: String
+    private var modelOptionsProvider: PolishingModelOptionsProvider {
+        PolishingModelOptionsProvider(apiSettings: polishingEngineStore.apiSettings)
     }
 
     private var activeProviderKind: APIProviderKind? {
@@ -908,7 +907,8 @@ struct NoteDetailView: View {
     private func currentPolishingModelDisplayName() -> String {
         if let kind = activeProviderKind {
             let currentID = polishingEngineStore.apiSettings.configuration(for: kind).textModel
-            return modelDisplayName(id: currentID, kind: kind)
+            let name = modelOptionsProvider.modelDisplayName(id: currentID, kind: kind)
+            return name.isEmpty ? generalSettingsStore.text(.defaultModelName) : name
         }
         if polishingEngineStore.selectedEngineID == PolishingEngineStore.mlxSwiftEngineID,
            let model = polishingEngineStore.activeModel {
@@ -919,7 +919,7 @@ struct NoteDetailView: View {
 
     private var currentProviderModelOptions: [PolishingModelOption] {
         if let kind = activeProviderKind {
-            return providerModelOptions(for: kind)
+            return modelOptionsProvider.providerModelOptions(for: kind, favorites: FavoriteModelsStore.loadFavorites())
         }
         if polishingEngineStore.selectedEngineID == PolishingEngineStore.mlxSwiftEngineID {
             return downloadedPolishingModels.map { PolishingModelOption(id: $0.id, displayName: $0.displayName) }
@@ -949,121 +949,6 @@ struct NoteDetailView: View {
         }
     }
 
-    private func cleanModelDisplayName(_ raw: String) -> String {
-        var name = raw
-        if let slashIndex = name.firstIndex(of: "/") {
-            name = String(name[name.index(after: slashIndex)...])
-        }
-        return name
-    }
-
-    private func availableModels(for kind: APIProviderKind) -> [PolishingModelOption] {
-        switch kind {
-        case .google:
-            return [
-                PolishingModelOption(id: "gemini-3.5-flash", displayName: "Gemini 3.5 Flash"),
-                PolishingModelOption(id: "gemini-2.5-flash", displayName: "Gemini 2.5 Flash"),
-                PolishingModelOption(id: "gemini-2.5-flash-lite", displayName: "Gemini 2.5 Flash Lite"),
-                PolishingModelOption(id: "gemini-2.5-pro", displayName: "Gemini 2.5 Pro"),
-                PolishingModelOption(id: "gemini-2.0-flash", displayName: "Gemini 2.0 Flash")
-            ]
-        case .openAI:
-            return [
-                PolishingModelOption(id: "gpt-4o-mini", displayName: "GPT-4o Mini"),
-                PolishingModelOption(id: "gpt-4o", displayName: "GPT-4o"),
-                PolishingModelOption(id: "o3-mini", displayName: "o3-mini"),
-                PolishingModelOption(id: "gpt-4-turbo", displayName: "GPT-4 Turbo")
-            ]
-        case .qwen:
-            return [
-                PolishingModelOption(id: "qwen3.6-flash", displayName: "Qwen 3.6 Flash"),
-                PolishingModelOption(id: "qwen3.7-plus", displayName: "Qwen 3.7 Plus"),
-                PolishingModelOption(id: "qwen3.8-max-preview", displayName: "Qwen 3.8 Max"),
-                PolishingModelOption(id: "qwen-turbo", displayName: "Qwen Turbo"),
-                PolishingModelOption(id: "qwen-max", displayName: "Qwen Max")
-            ]
-        case .openRouter:
-            return [
-                PolishingModelOption(id: "google/gemini-3.5-flash", displayName: "Gemini 3.5 Flash"),
-                PolishingModelOption(id: "deepseek/deepseek-v4-flash", displayName: "DeepSeek V4 Flash"),
-                PolishingModelOption(id: "qwen/qwen3.6-flash", displayName: "Qwen 3.6 Flash"),
-                PolishingModelOption(id: "openai/gpt-4o-mini", displayName: "GPT-4o Mini"),
-                PolishingModelOption(id: "anthropic/claude-3.5-haiku", displayName: "Claude 3.5 Haiku"),
-                PolishingModelOption(id: "google/gemini-2.5-flash", displayName: "Gemini 2.5 Flash"),
-                PolishingModelOption(id: "deepseek/deepseek-chat", displayName: "DeepSeek V3")
-            ]
-        case .custom:
-            let current = polishingEngineStore.apiSettings.configuration(for: .custom).textModel
-            return [PolishingModelOption(id: current, displayName: cleanModelDisplayName(current))]
-        case .anthropic:
-            return [
-                PolishingModelOption(id: "claude-3-5-haiku-latest", displayName: "Claude 3.5 Haiku"),
-                PolishingModelOption(id: "claude-3-5-sonnet-latest", displayName: "Claude 3.5 Sonnet")
-            ]
-        }
-    }
-
-    private func providerModelOptions(for kind: APIProviderKind) -> [PolishingModelOption] {
-        let favSet = FavoriteModelsStore.loadFavorites()
-        let baseOptions = availableModels(for: kind)
-        var result = baseOptions.filter { favSet.contains($0.id) }
-
-        for id in favSet {
-            if !result.contains(where: { $0.id == id }) && matchesProvider(modelID: id, kind: kind) {
-                result.append(PolishingModelOption(id: id, displayName: modelDisplayName(id: id, kind: kind)))
-            }
-        }
-
-        if result.isEmpty {
-            result = baseOptions
-        }
-
-        let currentID = polishingEngineStore.apiSettings.configuration(for: kind).textModel
-        if !currentID.isEmpty && !result.contains(where: { $0.id == currentID }) && matchesProvider(modelID: currentID, kind: kind) {
-            result.insert(PolishingModelOption(id: currentID, displayName: modelDisplayName(id: currentID, kind: kind)), at: 0)
-        }
-
-        var seenKeys = Set<String>()
-        var deduplicated: [PolishingModelOption] = []
-        for option in result {
-            let cleanName = cleanModelDisplayName(option.displayName)
-            let key = cleanName.lowercased()
-            if !seenKeys.contains(key) {
-                seenKeys.insert(key)
-                deduplicated.append(PolishingModelOption(id: option.id, displayName: cleanName))
-            }
-        }
-        return deduplicated
-    }
-
-    private func matchesProvider(modelID: String, kind: APIProviderKind) -> Bool {
-        let lower = modelID.lowercased()
-        if kind != .openRouter && kind != .custom && lower.contains("/") {
-            return false
-        }
-        switch kind {
-        case .google:
-            return lower.contains("gemini") || lower.contains("gemma") || lower.contains("google") || lower.contains("lyra")
-        case .openAI:
-            return lower.contains("gpt") || lower.contains("o3") || lower.contains("o1") || lower.contains("openai")
-        case .qwen:
-            return lower.contains("qwen") || lower.contains("deepseek") || lower.contains("glm")
-        case .openRouter:
-            return lower.contains("/")
-        case .anthropic:
-            return lower.contains("claude") || lower.contains("anthropic")
-        case .custom:
-            return true
-        }
-    }
-
-    private func modelDisplayName(id: String, kind: APIProviderKind) -> String {
-        let available = availableModels(for: kind)
-        if let match = available.first(where: { $0.id == id }) {
-            return cleanModelDisplayName(match.displayName)
-        }
-        return id.isEmpty ? generalSettingsStore.text(.defaultModelName) : cleanModelDisplayName(id)
-    }
 
     private func toggleRecording() {
         guard !isTogglingRecording else { return }

@@ -217,6 +217,25 @@ final class PolishingEngineStore: ObservableObject {
         return selectedEngineID != Self.mlxSwiftEngineID || settings.activeDownloadedModel(catalog: catalog) != nil
     }
 
+    /// Whether the active polishing engine can honor a translation instruction.
+    /// Only cloud LLM providers and downloaded local MLX models can translate text;
+    /// the rule-based engine and missing/disabled engines cannot. Used to decide
+    /// whether the HUD language ("A") control may be enabled for transcription
+    /// models that have no native translation (Parakeet, English-only Whisper).
+    var isActiveEngineTranslationCapable: Bool {
+        guard selectedEngineID != Self.disabledEngineID else { return false }
+
+        if let providerKind = APIProviderKind(polishingEngineID: selectedEngineID) {
+            return apiSettings.availablePolishingProviders.contains { $0.kind == providerKind }
+        }
+
+        // Rule-based fallback engine: no LLM, cannot translate.
+        guard selectedEngineID == Self.mlxSwiftEngineID else { return false }
+
+        reconcileModelStates()
+        return settings.activeDownloadedModel(catalog: catalog) != nil
+    }
+
     func updateAPIConfiguration(
         _ configuration: APIProviderConfiguration,
         for kind: APIProviderKind
