@@ -31,20 +31,22 @@
   <a href="#license--distribution">License</a>
 </p>
 
-Native **Swift / SwiftUI** for Apple Silicon — not Electron, not a browser shell. Work fully offline with local models, or plug in cloud APIs when you want them.
-
 ---
 
 ## Why SmartScribe
 
 | Advantage | What it means in practice |
 |-----------|---------------------------|
-| **Local-first** | WhisperKit, Parakeet, and MLX polishing run on your Mac. Audio and text stay on-device unless you deliberately choose a cloud engine. |
+| **Local-first** | Speech and polishing can stay on your Mac. Nothing leaves the device unless you choose a cloud provider. |
 | **Two-stage pipeline** | **Transcription** (speech → text) is separate from **polishing** (text → cleaner text). You always keep a faithful **Raw** transcript. |
 | **System-wide hotkeys** | Dictate from Slack, browser, IDE, or Notes. A floating **HUD** shows recording / processing without stealing keyboard focus. |
-| **Provider flexibility** | Local MLX models *and* Gemini / OpenAI / Anthropic / Qwen / OpenRouter / custom OpenAI-compatible endpoints — with multi-key rotation. |
+| **Local + cloud** | Use on-device models when you want privacy and speed, or cloud APIs when you want more power — switch live from the HUD. |
 | **Real workspace** | Notes history, Raw / Variant 1 / Variant 2, Markdown, glossary, translation, prompt templates, usage stats, built-in Help. |
-| **Native quality** | Developer ID signed, Apple notarized DMG, menu-bar status item, Accessibility insertion, dark/light UI, 12 interface languages. |
+| **Native quality** | Pure Swift / SwiftUI for Apple Silicon. Developer ID signed, Apple notarized DMG, dark/light UI, 12 interface languages. |
+
+### Under the hood (technical)
+
+Apple Silicon only · macOS 14+ · **WhisperKit** / **Parakeet** local ASR · **MLX** local polishing · optional Gemini / OpenAI / Anthropic / Qwen / OpenRouter · not Electron.
 
 ---
 
