@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/branding/app-icon.png" width="128" alt="SmartScribe logo">
+  <img src="https://raw.githubusercontent.com/Pavan-Gopa/SmartScribe/main/docs/branding/smartscribe-logo.png" width="140" alt="SmartScribe logo">
 </p>
 
 <h1 align="center">SmartScribe</h1>
