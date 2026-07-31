@@ -1,10 +1,31 @@
-# SmartScribe
+<p align="center">
+  <img src="docs/branding/app-icon.png" width="128" alt="SmartScribe logo">
+</p>
 
-**Native macOS dictation for Apple Silicon** — speak, get clean text, and drop it into any app.
+<h1 align="center">SmartScribe</h1>
+
+<p align="center">
+  <strong>Native macOS dictation for Apple Silicon</strong> — speak, get clean text, and drop it into any app.
+</p>
+
+<p align="center">
+  <a href="https://github.com/Pavan-Gopa/SmartScribe/releases/latest"><img src="https://img.shields.io/github/v/release/Pavan-Gopa/SmartScribe?style=flat-square&label=release&color=2ea44f" alt="Release"></a>
+  <a href="https://github.com/Pavan-Gopa/SmartScribe/releases"><img src="https://img.shields.io/github/downloads/Pavan-Gopa/SmartScribe/total?style=flat-square&label=downloads&color=0e75b6" alt="Downloads"></a>
+  <img src="https://img.shields.io/badge/macOS-14%2B%20Apple%20Silicon-111111?style=flat-square" alt="macOS 14+ Apple Silicon">
+  <img src="https://img.shields.io/badge/Swift-SwiftUI-F05138?style=flat-square" alt="Swift / SwiftUI">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-PolyForm%20Noncommercial-6f42c1?style=flat-square" alt="PolyForm Noncommercial"></a>
+  <a href="COMMERCIAL.md"><img src="https://img.shields.io/badge/commercial-paid%20license-d73a49?style=flat-square" alt="Commercial license"></a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/Pavan-Gopa/SmartScribe/releases/latest">Download</a> ·
+  <a href="#why-smartscribe">Features</a> ·
+  <a href="#whats-new-in-v101">What's new</a> ·
+  <a href="#install-end-users">Install</a> ·
+  <a href="#license--distribution">License</a>
+</p>
 
 SmartScribe is a **pure Swift / SwiftUI** desktop app (AppKit only where the OS requires it). No Electron, no browser shell, no cloud dependency for the core path. You can work fully offline with local models, or optionally plug in cloud APIs when you want higher-end polishing or Gemini dictation.
-
-> **Apple Silicon only** (M1 and later) · **macOS 14+** · Private repository · Current package: **v1.0.1**
 
 ---
 
