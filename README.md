@@ -1,6 +1,6 @@
 <p align="center">
-  <img src="docs/branding/logo-white.png#gh-dark-mode-only" width="140" alt="SmartScribe logo">
-  <img src="docs/branding/logo-black.png#gh-light-mode-only" width="140" alt="SmartScribe logo">
+  <img src="docs/branding/mark-white.png#gh-dark-mode-only" width="140" alt="SmartScribe logo">
+  <img src="docs/branding/mark-black.png#gh-light-mode-only" width="140" alt="SmartScribe logo">
 </p>
 
 <h1 align="center">SmartScribe</h1>
