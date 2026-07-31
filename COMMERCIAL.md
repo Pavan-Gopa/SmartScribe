@@ -21,6 +21,7 @@ Personal hobby use, private study, and noncommercial experimentation remain free
 Contact the maintainer to discuss pricing and terms:
 
 - **Email:** [dhamamedia@gmail.com](mailto:dhamamedia@gmail.com)
+- **Telegram / WhatsApp:** [+91 84366 99835](https://wa.me/918436699835) (message only — Indian number)
 - GitHub: open an issue on this repository, or message **@Pavan-Gopa**
 - Subject line suggestion: `SmartScribe commercial license`
 
