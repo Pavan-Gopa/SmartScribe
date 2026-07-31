@@ -301,7 +301,14 @@ Checklist: [`docs/RELEASE.md`](docs/RELEASE.md)
 
 ## License & distribution
 
-Private GitHub repository until public testing is complete. Builds are signed with **Developer ID Application: Stichting Kadamba Foundation (438UQRF7JV)** and notarized by Apple before handoff.
+| Use case | Allowed? |
+|----------|----------|
+| **Personal / private** use (yourself, hobby, study, noncommercial) | **Free** under [PolyForm Noncommercial 1.0.0](LICENSE) |
+| **Company / business** use (work devices, teams, commercial deployment) | **Paid commercial license** — see [COMMERCIAL.md](COMMERCIAL.md) |
+
+This is **source-available**, not OSI “open source”: companies may not use SmartScribe for commercial purposes without a paid agreement.
+
+Builds are signed with **Developer ID Application: Stichting Kadamba Foundation (438UQRF7JV)** and notarized by Apple.
 
 ---
 
@@ -309,3 +316,4 @@ Private GitHub repository until public testing is complete. Builds are signed wi
 
 - In-app **Help** and onboarding replay  
 - **Export System Logs** from General settings  
+- Commercial licensing: [COMMERCIAL.md](COMMERCIAL.md)  
